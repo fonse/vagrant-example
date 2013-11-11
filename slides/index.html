@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<meta name="viewport" content="width=1024, user-scalable=no">
+
+	<title>Entornos de Desarrollo Portables con Vagrant</title>
+	
+	<!-- Required stylesheet -->
+	<link rel="stylesheet" href="assets/css/deck.core.css">
+	<link rel="stylesheet" href="assets/css/horizontal-slide.css">
+	<link rel="stylesheet" href="assets/css/theme.css">
+	<link rel="stylesheet" href="assets/css/highlight.css">
+	
+	<!-- Required Modernizr file -->
+	<script src="assets/js/modernizr.custom.js"></script>
+</head>
+    
+<body class="deck-container">
+    <!-- Intro -->
+    <section class="slide">
+        <div class="vcenter">
+	        <h2>Entornos de Desarrollo Portables<br>con Vagrant</h2>
+	        <p>Alejandro Alfonso &ndash; <a target="_blank" href="https://twitter.com/fonse">@fonse</a></p>
+        </div>
+    </section>
+
+    <!-- Qué es Vagrant? -->
+    <section class="slide">
+	    <h2>Qué es Vagrant?</h2>
+	    <p>Vagrant es un software que permite crear entornos de desarrollo portables en base a un archivo de configuración.</p>
+	    <p>Los entornos de desarrollo son máquinas virtuales de <span class="emph">Virtualbox</span>, <span class="emph">VMware</span> u otros <em>providers</em> configurados con <span class="emph2">Chef</span>, <span class="emph2">Puppet</span>, <span class="emph2">shell scripts</span>, etc.</p>
+	    <p>Agregando el Vagrantfile al repo, todo el equipo puede trabajar sobre exactamente el mismo entorno, tan parecido al de producción como quieras.</p>
+	    <p>Entró un nuevo desarrollador? Nueva PC? Con un <code class="inline">vagrant up</code> ya tenés un entorno de desarrollo listo y configurado.</p>
+    </section>
+    
+    <!-- Instalación -->
+    <section class="slide">
+	    <h2>Instalación</h2>
+	    <ol>
+	        <li>Instalar VirtualBox y su Extension Pack (<a target="_blank" href="https://www.virtualbox.org/wiki/Downloads">https://www.virtualbox.org/wiki/Downloads</a>)</li>
+	        <li>Instalar Vagrant (<a target="_blank" href="http://downloads.vagrantup.com">http://downloads.vagrantup.com</a>)</li>
+	        <li>Para virtualizar entornos de 64 bits activar VT-x (Intel) o AMD-V (AMD) en el BIOS.</li>
+	    </ol>
+    </section>
+    
+    <!-- Vagrantfile -->
+    <section class="slide">
+	    <h2>Vagrantfile</h2>
+	    <p>Para saber qué debe hacer, vagrant lee el archivo <span class="emph">Vagrantfile</span> en el root del projecto.</p>
+	    <p>Podemos generar uno de ejemplo corriendo <code class="inline">vagrant init</code>.</p>
+	    
+	    <h3>Configuración Básica</h3>
+        <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  # Nombre para identificar la VM
+  config.vm.box = "barcamp"
+  
+  # URL de un ubuntu recién instalado para usar como base
+  # Ver más opciones en http://www.vagrantbox.es
+  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+end
+</code></pre>
+
+        <p>Corriendo <code class="inline">vagrant up</code> vamos a obtener una VM con ubuntu a la que podemos acceder con <code class="inline">vagrant ssh</code>.</p>
+    </section>
+    
+    <!-- Synced Folders -->
+    <section class="slide">
+	    <h2>Synced Folders</h2>
+	    <p>Vagrant permite sincronizar directorios de la máquina host con la máquina virtual.</p>
+	    <p>Esto permite trabajar sobre el código en la máquina host usando el mismo editor de siempre y ejecutarlo dentro dentro de la máquina virtual.</p>
+	    <p>Por defecto vagrant sincroniza el root del proyecto con el directorio <code class="inline">/vagrant</code> de la VM, pero pueden definirse nuevos directorios:</p>
+	    
+        <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.synced_folder "../data", "/home/vagrant/data"
+end
+</code></pre>
+    </section>
+    
+    <!-- Provisioning -->
+    <section class="slide">
+	    <h2>Provisioning</h2>
+	    <p>Para instalar paquetes, armar los archivos de configuración, etc. podemos usar shell scripts, chef, puppet, entre otros.</p>
+	    
+	    <div class="hide">
+	        <h3>Shell Script</h3>
+            <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.provision "shell" do |shell|
+    shell.inline = <span class="keyword">&lt;&lt;-SCRIPT</span>
+      <span class="string">export DEBIAN_FRONTEND=noninteractive
+      
+      apt-get update
+      apt-get install -qy php5-fpm nginx mysql-server</span>
+    <span class="keyword">SCRIPT</span>
+  end
+end
+</code></pre>
+        </div>
+
+	    <div class="slide">
+	        <div class="hide">
+	            <h3>Chef</h3>
+                <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.provision "chef_solo" do |chef|
+    chef.cookbooks_path = "cookbooks"
+  
+    chef.add_recipe "apt-get-update"
+    chef.add_recipe "php"
+    chef.add_recipe "nginx"
+    chef.add_recipe "mysql::server"
+  end
+end
+</code></pre>
+            </div>
+	    </div>
+	    
+	    <div class="slide">
+	        <div class="hide">
+	            <h3>Mixto</h3>
+                <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.provision "shell" do |shell|
+    s.inline = "apt-get update"
+  end
+
+  config.vm.provision "chef_solo" do |chef|
+    chef.add_recipe "php"
+    chef.add_recipe "nginx"
+    chef.add_recipe "mysql::server"
+  end
+end
+</code></pre>
+            </div>
+	    </div>
+    </section>
+    
+    <!-- Network -->
+    <section class="slide">
+	    <h2>Network</h2>
+	    <p>Usando port forwarding podemos hacer que la máquina virtual escuche en un puerto de la máquina host.</p>
+	    
+        <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.network :forwarded_port, guest: 80, host: 8080
+  config.vm.network :forwarded_port, guest: 443, host: 8443
+  config.vm.network :forwarded_port, guest: 3306, host: 3306
+end
+</code></pre>
+
+        <p>En este ejemplo, si entramos a <code class="inline">http://localhost:8080</code> vos va a responder el servidor web de la VM.</p>
+    </section>
+    
+    <!-- Combinando Todo -->
+    <section class="slide">
+	    <h2>Combinando Todo</h2>
+	    <p>Pueden descargar este ejemplo en <a target="_blank" href="https://github.com/fonse/vagrant-example">https://github.com/fonse/vagrant-example</a>.</p>
+<pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  # Name and source for the box
+  config.vm.box = "barcamp"
+  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+
+  # Forward ports into the box
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+
+  # Synced folder
+  config.vm.synced_folder "slides", "/home/vagrant/slides"
+
+  # Set up the box with chef
+  config.vm.provision "shell" do |s|
+    s.inline = "apt-get update"
+  end
+
+  config.vm.provision "chef_solo" do |chef|
+    chef.add_recipe "barcamp::nginx"
+    chef.add_recipe "barcamp::prompt"
+  end
+end
+</code></pre>
+    </section>
+
+    <!-- Línea de Comandos -->
+    <section class="slide">
+	    <h2>Línea de Comandos</h2>
+	    <p>Con <code class="inline">vagrant -h</code> podemos ver todos los comandos:</p>
+	    
+	    <ul>
+            <li><code class="inline">vagrant init</code> crea un Vagrantfile para empezar a usar Vagrant.</li>
+            <li><code class="inline">vagrant up</code> crea la VM o la prende si ya existe.</li>
+            <li><code class="inline">vagrant ssh</code> se conecta a la VM por ssh.</li>
+            <li><code class="inline">vagrant halt</code> apaga la VM.</li>
+            <li><code class="inline">vagrant destroy</code> elimina todos los archivos de la VM para crearla desde cero.</li>
+            <li><code class="inline">vagrant suspend</code> suspende la VM y <code class="inline">vagrant resume</code> la despierta.</li>
+            <li><code class="inline">vagrant status</code> muestra el estado de la VM: running, poweroff, etc.</li>
+            <li><code class="inline">vagrant reload</code> restartea la VM. Equivale a <code class="inline">vagrant halt</code> y <code class="inline">vagrant up</code>.</li>
+            <li><code class="inline">vagrant provision</code> corre las provisions configuradas en el Vagrantfile.</li>
+        </ul>
+    </section>
+    
+    <!-- Múltiples Máquinas -->
+    <section class="slide">
+	    <h2>Múltiples Máquinas</h2>
+	    <p>Vagrant permite definir múltiples máquinas dentro de un mismo entorno, permitiendo modelar sistemas distribuidos y arquitecturas de múltiples servidores.</p>
+	    
+	    <pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+
+  config.vm.define "web" do |web|
+    web.vm.box = "app"
+  end
+
+  config.vm.define "db" do |db|
+    db.vm.box = "mysql"
+  end
+end
+</code></pre>
+
+        <p>Al hacer <code class="inline">vagrant up</code> se levantarán 2 VMs a las que podemos acceder con <code class="inline">vagrant ssh web</code> o <code class="inline">vagrant ssh db</code>.</p>
+        <p>Todos los comandos pueden especificar la VM. Por ejemplo: <code class="inline">vagrant halt db</code>.</p>
+    </section>
+    
+    <!-- Múltiples Máquinas (Ejemplo completo) -->
+    <section class="slide">
+	    <h2>Múltiples Máquinas (Ejemplo completo)</h2>
+<pre><code class="ruby"><!--
+-->Vagrant.configure("2") do |config|
+  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+
+  config.vm.define "web" do |web|
+    web.vm.box = "app"
+    web.vm.network "private_network", ip: "10.0.0.10"
+    web.vm.network "forwarded_port", guest: 80, host: 8000
+    web.vm.provision "shell" do |shell|
+      shell.inline = "apt-get update && apt-get install -qy php5-fpm nginx mysql-client"
+    end
+  end
+
+  config.vm.define "db" do |db|
+    db.vm.box = "mysql"
+    db.vm.network "private_network", ip: "10.0.0.11"
+    db.vm.provision "shell" do |shell|
+      shell.inline = <span class="keyword">&lt;&lt;-SCRIPT</span>
+        <span class="string">export DEBIAN_FRONTEND=noninteractive
+        apt-get update && apt-get install -qy mysql-server
+        echo "[mysqld]\nbind-address = 0.0.0.0" > /etc/mysql/conf.d/bind-address.cnf && service mysql restart
+        echo "GRANT ALL ON *.* TO 'root'@'%'" | mysql -u root</span>
+      <span class="keyword">SCRIPT</span>
+    end
+  end
+end
+</code></pre>
+    </section>
+
+    <!-- Plugins -->
+    <section class="slide">
+	    <h2>Plugins</h2>
+	    <p>Existen plugins que extienden la funcionalidad de vagrant:<br><a target="_blank" href="https://github.com/mitchellh/vagrant/wiki/Available-Vagrant-Plugins">https://github.com/mitchellh/vagrant/wiki/Available-Vagrant-Plugins</a></p>
+
+        <p>Recomiendo instalar <em>vagrant-vbguest</em> si usan VirtualBox:</p>
+	    <pre><code class="bash">vagrant plugin install vagrant-vbguest</code></pre>
+
+        <p>Este plugin verifica que la versión de GuestAdditions de la máquina virtual coincida con el de la host.</p>
+        <p>Si no coinciden, se encarga de instalarlo automáticamente al hacer <code class="inline">vagrant up</code>.</p>
+    </section>
+    
+    <!-- Tip: Puertos Bajos -->
+    <section class="slide">
+	    <h2>Tip: Puertos Bajos</h2>
+	    <p>Podemos escuchar en puertos bajos corriendo en la máquina host:</p>
+	    
+	    <pre><code class="bash"><!--
+--># Linux
+sudo iptables -A OUTPUT -d localhost -t nat -p tcp --dport 80 -j REDIRECT --to-port 8080
+
+# Mac OS
+sudo ipfw add fwd 127.0.0.1,8080 tcp from any to me 80
+</code></pre>
+
+        <p>Esto hace que el puerto 80 de la máquina host se redirija al puerto 8080, donde vagrant puede escuchar sin privilegios.</p>
+        <p>Usando el puerto 53 podemos usar un resolvedor DNS dentro de la VM para evitar tener que modificar /etc/hosts.</p>
+    </section>
+    
+    <!-- Fin -->
+    <section class="slide">
+	    <div class="vcenter">
+	        <h2>Gracias!</h2>
+	        <p>Slides online en <a target="_blank" href="http://www.tiendanube.com/vagrant">tiendanube.com/vagrant</a></p>
+	        <p>Alejandro Alfonso &ndash; <a target="_blank" href="https://twitter.com/fonse">@fonse</a></p>
+        </div>
+    </section>
+    
+
+    <!-- Required JS files -->
+    <script src="assets/js/jquery-1.7.2.min.js"></script>
+    <script src="assets/js/deck.core.js"></script>
+    <script src="assets/js/deck.hash.js"></script>
+    <script src="assets/js/highlight.pack.js"></script>
+
+    <!-- Initialize the deck -->
+    <script>
+	    $(function() {
+		    $.deck('.slide');
+	    });
+
+        hljs.initHighlightingOnLoad();
+    </script>
+</body>
+</html>
