@@ -3,7 +3,7 @@
 Vagrantfile y slides de la presentación sobre vagrant del BarCamp Buenos Aires 2013.
 
 ### Slides Online
-Ver las [slides online](gttp://fonse.github.io/vagrant-example/).
+Ver las [slides online](http://fonse.github.io/vagrant-example/).
 
 ### Correr la Demo 
 Instalar Vagrant, clonar el repo y correr `vagrant up` para levantar la máquina virtual.
